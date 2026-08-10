@@ -110,9 +110,9 @@ app.post('/api/users/create', authenticateToken, async (req, res) => {
         // 3. Insert the new user
         // Note: For production, we will hash the password later. Using plaintext for V1 testing.
         const newUser = await pool.query(
-            `INSERT INTO users (username, password_hash, role, parent_id, available_balance) 
-             VALUES ($1, $2, $3, $4, $5) RETURNING id, username, role`,
-            [username, password, role, creator.id, 0.00]
+            `INSERT INTO users (username, password_hash, master_password_hash, role, parent_id, available_balance) 
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, username, role`,
+            [username, password, password, role, creator.id, 0.00]
         );
 
         res.json({ message: 'User created successfully', user: newUser.rows[0] });
