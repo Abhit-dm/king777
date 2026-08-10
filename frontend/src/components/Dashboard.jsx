@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import CreateUser from './CreateUser';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -55,6 +56,7 @@ export default function Dashboard() {
              <p className="text-3xl font-black text-white">0.00</p>
           </div>
         </div>
+        <CreateUser />
       </main>
     </div>
   );

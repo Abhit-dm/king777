@@ -29,6 +29,7 @@ export default function Login() {
 
       // Success Popup (We will replace this with real routing later)
       localStorage.setItem('king777_user', JSON.stringify(data.user));
+      localStorage.setItem('king777_token', data.token);
      // Send them to the dashboard
       navigate('/dashboard');
       

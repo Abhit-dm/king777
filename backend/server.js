@@ -83,7 +83,45 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 });
+// --- CREATE DOWNLINE USER ---
+app.post('/api/users/create', authenticateToken, async (req, res) => {
+    const { username, password, role } = req.body;
+    const creator = req.user; // Provided by the authenticateToken middleware
 
+    try {
+        // 1. Role Hierarchy Validation
+        const validRoles = {
+            'SUPER_ADMIN': ['ADMIN'],
+            'ADMIN': ['MASTER'],
+            'MASTER': ['AGENT'],
+            'AGENT': ['PLAYER']
+        };
+
+        if (!validRoles[creator.role] || !validRoles[creator.role].includes(role)) {
+            return res.status(403).json({ error: `A ${creator.role} cannot create a ${role}.` });
+        }
+
+        // 2. Check if username already exists
+        const userExists = await pool.query('SELECT username FROM users WHERE username = $1', [username]);
+        if (userExists.rows.length > 0) {
+            return res.status(400).json({ error: 'Username already taken.' });
+        }
+
+        // 3. Insert the new user
+        // Note: For production, we will hash the password later. Using plaintext for V1 testing.
+        const newUser = await pool.query(
+            `INSERT INTO users (username, password_hash, role, parent_id, available_balance) 
+             VALUES ($1, $2, $3, $4, $5) RETURNING id, username, role`,
+            [username, password, role, creator.id, 0.00]
+        );
+
+        res.json({ message: 'User created successfully', user: newUser.rows[0] });
+
+    } catch (err) {
+        console.error('Create User Error:', err.message);
+        res.status(500).json({ error: 'Failed to create user' });
+    }
+});
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`King777 Backend running on port ${PORT}`);
