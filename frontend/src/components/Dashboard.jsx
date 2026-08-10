@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import CreateUser from './CreateUser';
+import DownlineList from './DownlineList';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -56,8 +57,16 @@ export default function Dashboard() {
              <p className="text-3xl font-black text-white">0.00</p>
           </div>
         </div>
-        <CreateUser />
-      </main>
+        {/* Management Section: Side-by-Side Grid */}
+     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+       <div className="lg:col-span-1">
+         <CreateUser />
+       </div>
+       <div className="lg:col-span-2">
+         <DownlineList />
+       </div>
+     </div>
+   </main>
     </div>
   );
 }

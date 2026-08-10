@@ -114,6 +114,19 @@ app.post('/api/users/create', authenticateToken, async (req, res) => {
              VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, username, role`,
             [username, password, password, role, creator.id, 0.00]
         );
+        // --- GET DOWNLINE USERS ---
+app.get('/api/users/downline', authenticateToken, async (req, res) => {
+    try {
+        const downlineQuery = await pool.query(
+            'SELECT id, username, role, available_balance FROM users WHERE parent_id = $1 ORDER BY id DESC',
+            [req.user.id]
+        );
+        res.json(downlineQuery.rows);
+    } catch (err) {
+        console.error('Fetch Downline Error:', err.message);
+        res.status(500).json({ error: 'Failed to fetch downline' });
+    }
+});
 
         res.json({ message: 'User created successfully', user: newUser.rows[0] });
 
