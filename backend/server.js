@@ -1,11 +1,14 @@
 const express = require('express');
 const cors = require('cors');
 const pool = require('./db');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// --- PUBLIC ROUTES ---
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'API is running for King777 V1' });
@@ -14,9 +17,7 @@ app.get('/api/health', (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     const { username, password } = req.body;
     try {
-        // Fail-safe check to catch the exact error
         if (!pool || typeof pool.query !== 'function') {
-            console.error('CRITICAL POOL ERROR. Pool is currently:', pool);
             return res.status(500).json({ error: 'Database pool failed to initialize' });
         }
         
@@ -31,8 +32,16 @@ app.post('/api/auth/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid password' });
         }
 
+        // Generate the JWT Token
+        const token = jwt.sign(
+            { id: user.id, username: user.username, role: user.role },
+            process.env.JWT_SECRET,
+            { expiresIn: '8h' }
+        );
+
         res.json({
             message: 'Login successful',
+            token: token,
             user: {
                 id: user.id,
                 username: user.username,
@@ -42,6 +51,35 @@ app.post('/api/auth/login', async (req, res) => {
         });
     } catch (err) {
         console.error('Server Catch Error:', err.message);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// --- JWT MIDDLEWARE ---
+// This function will protect all future routes (like creating users or transferring balances)
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Expects "Bearer TOKEN"
+
+    if (!token) return res.status(401).json({ error: 'Access Denied: No token provided' });
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, decodedUser) => {
+        if (err) return res.status(403).json({ error: 'Invalid or expired token' });
+        req.user = decodedUser;
+        next();
+    });
+};
+
+// --- SECURE ROUTES ---
+// Example of a protected route that requires a valid token
+app.get('/api/users/me', authenticateToken, async (req, res) => {
+    try {
+        const userQuery = await pool.query(
+            'SELECT id, username, role, available_balance FROM users WHERE id = $1', 
+            [req.user.id]
+        );
+        res.json(userQuery.rows[0]);
+    } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
 });
