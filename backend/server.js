@@ -7,25 +7,26 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// --- V1 API ROUTES ---
-
-// 1. Basic Health Check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'API is running for King777 V1' });
 });
 
-// 2. Login Endpoint (Raw password check for V1 testing)
 app.post('/api/auth/login', async (req, res) => {
     const { username, password } = req.body;
     try {
+        // Fail-safe check to catch the exact error
+        if (!pool || typeof pool.query !== 'function') {
+            console.error('CRITICAL POOL ERROR. Pool is currently:', pool);
+            return res.status(500).json({ error: 'Database pool failed to initialize' });
+        }
+        
         const userQuery = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
         if (userQuery.rows.length === 0) {
             return res.status(401).json({ error: 'User not found' });
         }
         
         const user = userQuery.rows[0];
-        // Note: For testing V1, we are doing a raw string check. 
-        // Before launch, we will implement bcrypt here!
+        
         if (password !== user.password_hash) {
             return res.status(401).json({ error: 'Invalid password' });
         }
@@ -40,7 +41,7 @@ app.post('/api/auth/login', async (req, res) => {
             }
         });
     } catch (err) {
-        console.error(err.message);
+        console.error('Server Catch Error:', err.message);
         res.status(500).json({ error: 'Server error' });
     }
 });
